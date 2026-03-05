@@ -1,0 +1,9 @@
+[package]
+name = "stark_circle"
+version = "0.1.0"
+edition = "2024_07"
+description = "Stark-Circle spending vault - GPay-style delegation on Starknet"
+authors = ["Stark-Circle"]
+
+[dependencies]
+starknet = ">=2.8.0"
