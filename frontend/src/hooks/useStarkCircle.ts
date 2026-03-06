@@ -8,7 +8,7 @@ import {
   type WalletInterface,
 } from "starkzap";
 import type { Call } from "starknet";
-import { sdk } from "../lib/starkzap";
+import { sdk, hasPaymaster } from "../lib/starkzap";
 
 const SIGNER_CONTEXT_API = import.meta.env.VITE_SIGNER_CONTEXT_API ?? "";
 
@@ -52,8 +52,8 @@ export function useStarkCircle() {
               }),
           },
           accountPreset: accountPresets.argentXV050,
-          feeMode: "sponsored",
-          deploy: "if_needed",
+          ...(hasPaymaster && { feeMode: "sponsored" as const }),
+          deploy: "never",
         });
         setWallet(w);
         return w;
@@ -88,7 +88,10 @@ export function useStarkCircle() {
         entrypoint: "spend",
         calldata: [tokenAddress, merchantAddress, amount],
       };
-      const tx = await wallet.execute([call], { feeMode: "sponsored" });
+      const tx = await wallet.execute(
+        [call],
+        hasPaymaster ? { feeMode: "sponsored" } : {}
+      );
       await tx.wait();
       return tx;
     },

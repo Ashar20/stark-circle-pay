@@ -1,0 +1,1 @@
+{"version":1,"contracts":[{"id":"ci8e0507k3ti2","package_name":"stark_circle","contract_name":"SpendingVault","module_path":"stark_circle::SpendingVault","artifacts":{"sierra":"stark_circle_SpendingVault.contract_class.json","casm":"stark_circle_SpendingVault.compiled_contract_class.json"}}]}

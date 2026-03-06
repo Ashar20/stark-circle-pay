@@ -5,14 +5,16 @@
 import { StarkZap } from "starkzap";
 
 const PAYMASTER_NODE_URL = "https://starknet.paymaster.avnu.fi";
-const paymasterApiKey = import.meta.env.VITE_PAYMASTER_API_KEY;
+const paymasterApiKey = import.meta.env.VITE_PAYMASTER_API_KEY as string | undefined;
+
+export const hasPaymaster = !!paymasterApiKey;
 
 export const sdk = new StarkZap({
   network: "sepolia",
-  ...(paymasterApiKey && {
+  ...(hasPaymaster && {
     paymaster: {
       nodeUrl: PAYMASTER_NODE_URL,
-      apiKey: paymasterApiKey,
+      headers: { "x-paymaster-api-key": paymasterApiKey },
     },
   }),
 });

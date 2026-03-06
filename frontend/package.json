@@ -11,9 +11,11 @@
   },
   "dependencies": {
     "@privy-io/react-auth": "^3.16.0",
+    "html5-qrcode": "^2.3.8",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "starkzap": "^1.0.0"
+    "starkzap": "^1.0.0",
+    "vite-plugin-pwa": "^1.2.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

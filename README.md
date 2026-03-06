@@ -23,16 +23,24 @@ scarb build
 
 After deployment, the **owner** deposits USDC (or other ERC20) to the vault’s address and adds members with `add_member(member, daily_limit)`.
 
-## 2. Frontend (StarkZap + Privy + Paymaster)
+## 2. Frontend — PWA (StarkZap + Privy + WebAuthn + Paymaster)
 
 - **Path:** `frontend/`
-- **Stack:** Vite, React, TypeScript, `starkzap`, `@privy-io/react-auth`.
+- **Stack:** Vite, React, TypeScript, `starkzap`, `@privy-io/react-auth`, `html5-qrcode`, `vite-plugin-pwa`.
+- **PWA:** Installable on Android home screen, works offline for UI, served as standalone app.
+- **Biometrics:** WebAuthn (FIDO2) via `navigator.credentials` — triggers native Android fingerprint / face ID before every payment. No native SDK needed.
 
 ### Env (see `frontend/.env.example`)
 
-- `VITE_PRIVY_APP_ID` — from [Privy Dashboard](https://dashboard.privy.io).
-- `VITE_PAYMASTER_API_KEY` — from [AVNU Portal](https://portal.avnu.fi/) for sponsored gas.
-- `VITE_SIGNER_CONTEXT_API` — your backend that, for a Privy user, returns `{ walletId, publicKey, serverUrl }` (used by StarkZap’s Privy strategy).
+| Variable | Description |
+|---|---|
+| `VITE_PRIVY_APP_ID` | From Privy Dashboard |
+| `VITE_PAYMASTER_API_KEY` | From AVNU Portal for sponsored gas |
+| `VITE_SIGNER_CONTEXT_API` | Your backend: `POST → { walletId, publicKey, serverUrl }` |
+| `VITE_RESOLVE_MEMBER_API` | Your backend: `POST { email } → { address: "0x…" }` (optional) |
+| `VITE_VAULT_ADDRESS` | SpendingVault contract address after deploy |
+| `VITE_USDC_ADDRESS` | USDC ERC20 address on Starknet Sepolia |
+| `VITE_RPC_URL` | Starknet RPC (defaults to public Blast endpoint) |
 
 ### Run
 
@@ -43,18 +51,40 @@ npm install
 npm run dev
 ```
 
+To install as a PWA on Android: open in Chrome → menu → "Add to Home screen".
+
+### Views
+
+**Owner (parent) — Circle Dashboard**
+- Shows vault address (copy to share with members).
+- Deposit USDC to vault (ERC20 transfer from owner wallet).
+- Add member by email or `0x` address with daily USDC limit.
+- Remove members. List of members with limit / spent today.
+- Role detected automatically: if `wallet.address == vault.get_owner()` → owner view.
+
+**Member (child) — Tap to Pay**
+- On first load: registers a WebAuthn passkey (device biometric).
+- Tap "Scan QR Code" → opens rear camera via `html5-qrcode`.
+- Merchant QR encodes: `{ vault, token, merchant, amount, label? }`.
+- Shows payment amount + biometric prompt (fingerprint / face ID).
+- Calls `vault.spend()` with `feeMode: "sponsored"` — member pays $0 gas.
+
+### Merchant QR payload
+
+Merchants generate a QR containing this JSON:
+
+```json
+{ "vault": "0x…", "token": "0x…", "merchant": "0x…", "amount": "5000000", "label": "Coffee $5" }
+```
+
+`amount` is in token smallest units (USDC 6 decimals → $5.00 = `"5000000"`).
+
 ### Integration flow
 
-1. **Login:** User signs in with Privy (email/social).
-2. **Onboard member:** `onboardMember(getAccessToken)` uses `sdk.onboard({ strategy: OnboardStrategy.Privy, ..., feeMode: "sponsored" })` so the member gets a wallet without gas.
-3. **Delegated spend:** Member calls `executeDelegatedSpend(vaultAddress, tokenAddress, merchantAddress, amount)`. The frontend uses `wallet.execute([call], { feeMode: "sponsored" })` so the **member pays $0 gas**; the paymaster pays.
-
-The member’s Social Login identity is used to get a signer (via your backend and Privy). That signer authorizes the vault’s `spend` call; the vault contract enforces membership and daily limits and performs the ERC20 transfer from the vault to the merchant.
-
-## 3. UI flow (from PRD)
-
-- **Parent:** Circle Dashboard → Add Member (email) → Set limit ($50/day) → Deposit USDC to vault.
-- **Child:** Tap to Pay → Scan merchant QR → Biometric/Face ID → Transaction (sponsored gas).
+1. User signs in with Privy (email / Google).
+2. `onboardMember(getAccessToken)` — creates ArgentX v0.5 account, fully sponsored.
+3. WebAuthn passkey registered on device (platform authenticator = fingerprint/face).
+4. Child scans merchant QR → biometric prompt → `vault.spend()` on-chain.
 
 ## Links
 
